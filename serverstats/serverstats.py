@@ -26,14 +26,14 @@ _ = Translator("ServerStats", __file__)
 
 class FuzzyMember(IDConverter):
     """
-    This will accept user ID's, mentions, and perform a fuzzy search for 
+    This will accept user ID's, mentions, and perform a fuzzy search for
     members within the guild and return a list of member objects
     matching partial names
 
     Guidance code on how to do this from:
     https://github.com/Rapptz/discord.py/blob/rewrite/discord/ext/commands/converter.py#L85
     https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/mod/mod.py#L24
-    
+
     """
 
     async def convert(self, ctx, argument):
@@ -76,7 +76,7 @@ class GuildConverter(IDConverter):
     Guidance code on how to do this from:
     https://github.com/Rapptz/discord.py/blob/rewrite/discord/ext/commands/converter.py#L85
     https://github.com/Cog-Creators/Red-DiscordBot/blob/V3/develop/redbot/cogs/mod/mod.py#L24
-    
+
     """
 
     async def convert(self, ctx, argument):
@@ -124,22 +124,8 @@ class ServerStats(getattr(commands, "Cog", object)):
         if channel_id is None:
             return
         channel = self.bot.get_channel(channel_id)
-        passed = (datetime.datetime.utcnow() - guild.created_at).days
-        created_at = _(
-            "{bot} has joined a server!\n "
-            "That's **{num}** servers now!\n"
-            "That's a total of **{users}** users !\n"
-            "Server created on **{since}**. "
-            "That's over **{passed}** days ago!"
-        ).format(
-            bot=channel.guild.me.mention,
-            num=len(self.bot.guilds),
-            users=sum(len(s.members) for s in self.bot.guilds),
-            since=guild.created_at.strftime("%d %b %Y %H:%M:%S"),
-            passed=passed,
-        )
         em = await self.guild_embed(guild)
-        em.description = created_at
+        em.title = "{bot} has left {server}".format(bot=channel.guild.me.name, server=guild.name)
         await channel.send(embed=em)
 
     async def guild_embed(self, guild):
@@ -150,156 +136,51 @@ class ServerStats(getattr(commands, "Cog", object)):
         def check_feature(feature):
             return "\N{WHITE HEAVY CHECK MARK}" if feature in guild.features else "\N{CROSS MARK}"
 
-        verif = {0: "0 - None", 1: "1 - Low", 2: "2 - Medium", 3: "3 - Hard", 4: "4 - Extreme"}
-
-        region = {
-            "vip-us-east": "__VIP__ US East :flag_us:",
-            "vip-us-west": "__VIP__ US West :flag_us:",
-            "vip-amsterdam": "__VIP__ Amsterdam :flag_nl:",
-            "eu-west": "EU West :flag_eu:",
-            "eu-central": "EU Central :flag_eu:",
-            "london": "London :flag_gb:",
-            "frankfurt": "Frankfurt :flag_de:",
-            "amsterdam": "Amsterdam :flag_nl:",
-            "us-west": "US West :flag_us:",
-            "us-east": "US East :flag_us:",
-            "us-south": "US South :flag_us:",
-            "us-central": "US Central :flag_us:",
-            "singapore": "Singapore :flag_sg:",
-            "sydney": "Sydney :flag_au:",
-            "brazil": "Brazil :flag_br:",
-            "hongkong": "Hong Kong :flag_hk:",
-            "russia": "Russia :flag_ru:",
-            "japan": "Japan :flag_jp:",
-            "southafrica": "South Africa :flag_za:",
-        }
-
-        format_kwargs = {
-            "vip": check_feature("VIP_REGIONS"),
-            "van": check_feature("VANITY_URL"),
-            "splash": check_feature("INVITE_SPLASH"),
-            "m_emojis": check_feature("MORE_EMOJI"),
-            "verify": check_feature("VERIFIED"),
-        }
-        online = len([m.status for m in guild.members if m.status == discord.Status.online])
-        idle = len([m.status for m in guild.members if m.status == discord.Status.idle])
-        dnd = len([m.status for m in guild.members if m.status == discord.Status.dnd])
-        offline = len([m.status for m in guild.members if m.status == discord.Status.offline])
-        streaming = len([m for m in guild.members if isinstance(m.activity, discord.Streaming)])
-        mobile = len([m for m in guild.members if m.is_on_mobile()])
-        lurkers = len([m for m in guild.members if m.joined_at is None])
         total_users = len(guild.members)
         humans = len([a for a in guild.members if a.bot == False])
         bots = len([a for a in guild.members if a.bot])
         text_channels = len([x for x in guild.text_channels])
         voice_channels = len([x for x in guild.voice_channels])
         passed = (datetime.datetime.utcnow() - guild.created_at).days
-        created_at = _("Created on **{since}**. " "That's over **{passed}** days ago!").format(
-            since=guild.created_at.strftime("%d %b %Y %H:%M"), passed=passed
+        created_at = _("Created on : {since}").format(
+            since=guild.created_at.strftime("%d %b %Y %H:%M")
         )
         try:
             joined_at = guild.me.joined_at
         except:
             joined_at = datetime.datetime.utcnow()
-            
+
         bot_joined = joined_at.strftime("%d %b %Y %H:%M:%S")
         since_joined = (datetime.datetime.utcnow() - joined_at).days
-        
+
         joined_on = _(
-            "**{bot_name}** joined this server on **{bot_join}**. That's over **{since_join}** days ago!"
-        ).format(bot_name=guild.me.name, bot_join=bot_joined, since_join=since_joined)
+            "Joined on : {bot_join}"
+        ).format(bot_join=bot_joined)
 
-        colour = guild.roles[-1].colour
-
-        em = discord.Embed(description=f"{created_at}\n{joined_on}", colour=colour)
-        if lurkers:
-            em.add_field(
-                name=_("Members :"),
-                value=_(
-                    "Total users : **{total}**\nLurkers : **{lurkers}**\nHumans : **{hum}** • Bots : **{bots}**\n"
-                    "📗 `{online}` 📙 `{idle}`\n📕 `{dnd}` 📓 `{off}`\n"
-                    "🎥 `{streaming}` 📱 `{mobile}`\n"
-                ).format(
-                    total=total_users,
-                    lurkers=lurkers,
-                    hum=humans,
-                    bots=bots,
-                    online=online,
-                    idle=idle,
-                    dnd=dnd,
-                    off=offline,
-                    streaming=streaming,
-                    mobile=mobile,
-                ),
-            )
-        else:
-            em.add_field(
-                name=_("Members :"),
-                value=_(
-                    "Total users : **{total}**\nHumans : **{hum}** • Bots : **{bots}**\n"
-                    "📗 `{online}` 📙 `{idle}`\n📕 `{dnd}` 📓 `{off}`\n"
-                    "🎥 `{streaming}` 📱 `{mobile}`\n"
-                ).format(
-                    total=total_users,
-                    lurkers=lurkers,
-                    hum=humans,
-                    bots=bots,
-                    online=online,
-                    idle=idle,
-                    dnd=dnd,
-                    off=offline,
-                    streaming=streaming,
-                    mobile=mobile,
-                ),
-            )
+        em = discord.Embed(description=f"{created_at}\n{joined_on}")
         em.add_field(
-            name=_("Channels :"),
-            value=_("💬 Text : **{text}**\n🔊 Voice : **{voice}**").format(
-                text=text_channels, voice=voice_channels
+            name=_("Members :"),
+            value=_(
+                "Total users : {total}\nHumans : {hum}\nBots : {bots}"
+            ).format(
+                total=total_users,
+                hum=humans,
+                bots=bots,
             ),
         )
         em.add_field(
             name=_("Utility :"),
             value=_(
-                "Owner : {owner.mention}\n**{owner}**\nRegion : **{region}**\nVerif. level : **{verif}**\nServer ID : **{id}**"
+                "Owner : {owner}\nServer ID : {id}"
             ).format(
                 owner=guild.owner,
-                region=region[str(guild.region)],
-                verif=verif[int(guild.verification_level)],
                 id=guild.id,
             ),
         )
-        em.add_field(
-            name=_("Misc :"),
-            value=_(
-                "AFK channel : **{afk_chan}**\nAFK Timeout : **{afk_timeout}sec**\nCustom emojis : **{emojis}**\nRoles : **{roles}**"
-            ).format(
-                afk_chan=guild.afk_channel,
-                afk_timeout=guild.afk_timeout,
-                emojis=len(guild.emojis),
-                roles=len(guild.roles),
-            ),
-        )
-        if guild.features:
-            em.add_field(
-                name=_("Special features :"),
-                value=_(
-                    "{vip} VIP Regions\n{van} Vanity URL\n{splash} Splash Invite\n{m_emojis} More Emojis\n{verify} Verified"
-                ).format(**format_kwargs),
-            )
-        if "VERIFIED" in guild.features:
-            em.set_author(
-                name=guild.name,
-                icon_url="https://cdn.discordapp.com/emojis/457879292152381443.png",
-            )
+        em.title = guild.name
         if guild.icon_url:
-            em.set_author(name=guild.name, url=guild.icon_url)
             em.set_thumbnail(url=guild.icon_url)
         else:
-            em.set_author(
-                name=guild.name,
-                url="https://cdn.discordapp.com/attachments/494975386334134273/529843761635786754/Discord-Logo-Black.png",
-            )
             em.set_thumbnail(
                 url="https://cdn.discordapp.com/attachments/494975386334134273/529843761635786754/Discord-Logo-Black.png"
             )
@@ -312,22 +193,7 @@ class ServerStats(getattr(commands, "Cog", object)):
             return
         channel = self.bot.get_channel(channel_id)
         em = await self.guild_embed(guild)
-        passed = (datetime.datetime.utcnow() - guild.created_at).days
-        created_at = _(
-            "{bot} has left a server!\n "
-            "That's **{num}** servers now!\n"
-            "That's a total of **{users}** users !\n"
-            "Server created on **{since}**. "
-            "That's over **{passed}** days ago!"
-        ).format(
-            bot=channel.guild.me.mention,
-            num=len(self.bot.guilds),
-            users=sum(len(s.members) for s in self.bot.guilds),
-            since=guild.created_at.strftime("%d %b %Y %H:%M"),
-            passed=passed,
-        )
-        em.description = created_at
-
+        em.title = "{bot} has left {server}".format(bot=channel.guild.me.mention, server=guild.name)
         await channel.send(embed=em)
 
     async def ask_for_invite(self, ctx):
@@ -388,6 +254,80 @@ class ServerStats(getattr(commands, "Cog", object)):
         await self.config.join_channel.set(None)
         await ctx.send(_("No longer posting joined or left servers."))
 
+    async def guild_menu(
+        self, ctx, post_list: list, message: discord.Message = None, page=0, timeout: int = 30
+    ):
+        """menu control logic for this taken from
+           https://github.com/Lunar-Dust/Dusty-Cogs/blob/master/menu/menu.py"""
+
+        guild = post_list[page]
+        em = await self.guild_embed(guild)
+
+        if not message:
+            message = await ctx.send(embed=em)
+            await message.add_reaction("⬅")
+            await message.add_reaction("❌")
+            await message.add_reaction("➡")
+            await message.add_reaction("📤")
+            await message.add_reaction("📥")
+        else:
+            # message edits don't return the message object anymore lol
+            await message.edit(embed=em)
+        check = (
+            lambda react, user: user == ctx.message.author
+            and react.emoji in ["➡", "⬅", "❌", "\N{OUTBOX TRAY}", "\N{INBOX TRAY}"]
+            and react.message.id == message.id
+        )
+        try:
+            react, user = await self.bot.wait_for("reaction_add", check=check, timeout=timeout)
+        except asyncio.TimeoutError:
+            await message.remove_reaction("⬅", ctx.me)
+            await message.remove_reaction("❌", ctx.me)
+            await message.remove_reaction("➡", ctx.me)
+            await message.remove_reaction("\N{INBOX TRAY}", ctx.me)
+            await message.remove_reaction("\N{OUTBOX TRAY}", ctx.me)
+            return None
+        else:
+            if react.emoji == "➡":
+                next_page = 0
+                if page == len(post_list) - 1:
+                    next_page = 0  # Loop around to the first item
+                else:
+                    next_page = page + 1
+                if ctx.channel.permissions_for(ctx.me).manage_messages:
+                    await message.remove_reaction("➡", ctx.message.author)
+                return await self.guild_menu(
+                    ctx, post_list, message=message, page=next_page, timeout=timeout
+                )
+            elif react.emoji == "⬅":
+                next_page = 0
+                if page == 0:
+                    next_page = len(post_list) - 1  # Loop around to the last item
+                else:
+                    next_page = page - 1
+                if ctx.channel.permissions_for(ctx.me).manage_messages:
+                    await message.remove_reaction("⬅", ctx.message.author)
+                return await self.guild_menu(
+                    ctx, post_list, message=message, page=next_page, timeout=timeout
+                )
+            elif react.emoji == "\N{OUTBOX TRAY}":
+                try:
+                    await self.confirm_leave_guild(ctx, guild)
+                except:
+                    pass
+            elif react.emoji == "\N{INBOX TRAY}":
+                invite = await self.get_guild_invite(guild)
+                if invite:
+                    await ctx.send(str(invite))
+                else:
+                    await ctx.send(
+                        _("I cannot find or create an invite for `{guild}`").format(
+                            guild=guild.name
+                        )
+                    )
+            else:
+                return await message.delete()
+
     @staticmethod
     async def confirm_leave_guild(ctx, guild):
         await ctx.send(
@@ -441,6 +381,7 @@ class ServerStats(getattr(commands, "Cog", object)):
                 return
 
     @commands.command()
+    @checks.is_owner()
     @commands.bot_has_permissions(embed_links=True)
     async def getguild(self, ctx, *, guild: GuildConverter = None):
         """
