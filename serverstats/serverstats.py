@@ -193,7 +193,7 @@ class ServerStats(getattr(commands, "Cog", object)):
             return
         channel = self.bot.get_channel(channel_id)
         em = await self.guild_embed(guild)
-        em.title = "{bot} has left {server}".format(bot=channel.guild.me.mention, server=guild.name)
+        em.title = "{bot} has left {server}".format(bot=channel.guild.me.name, server=guild.name)
         await channel.send(embed=em)
 
     async def ask_for_invite(self, ctx):
